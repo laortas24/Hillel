@@ -75,5 +75,5 @@ output "instance_pub_ip" {
   sensitive = false
 }
 output "instance_pub_dns" {
-  value = aws_instance.this.public_dns
+  value = aws_eip.this.0.public_dns
 }
