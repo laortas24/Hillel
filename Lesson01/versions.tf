@@ -1,4 +1,3 @@
-Dmitriy Pavlovskiy, [18 мая 2021 г., 12:24:37]:
 terraform {
   required_providers {
     aws = {
