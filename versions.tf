@@ -8,8 +8,8 @@ terraform {
   required_version = ">= 0.14"
 }
 provider "aws" {
-  access_key = "AKIAZ2VJPR7WYI7UYKOW"
-  secret_key = "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"
+  access_key = ""
+  secret_key = ""
   region = "us-west-2"
 
 
