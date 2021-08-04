@@ -1,0 +1,16 @@
+---
+# tasks file for application
+- name: setup APP instance
+  include: setup_app.yml
+  tags:
+    - apache-php-configuration
+
+- name: setup DB instance
+  include: setup_db.yml
+  tags:
+    - mysql-configuration
+
+- name: deploy site
+  include: delpoy_site.yml
+  tags:
+    - deply-site

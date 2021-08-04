@@ -1,0 +1,6 @@
+---
+- name: Configure hosts and deploy application
+  hosts: all
+  become: true
+  roles:
+    - application

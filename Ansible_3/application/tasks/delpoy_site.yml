@@ -1,0 +1,17 @@
+# Deploy site
+- name: Deploy site
+  git:
+    repo: "https://github.com/FaztWeb/php-mysql-crud"
+    dest: "/var/www/{{ http_host }}/"
+    force: yes
+  when: inventory_hostname in ['appserver']
+  tags: deply-site
+
+# Update DB configuration file for the site
+- name: Deploy DB configuration file
+  template:
+    src: "templates/db.php.j2"
+    dest: "/var/www/{{ http_host }}/db.php"
+  when: inventory_hostname in ['appserver']
+  tags: deply-site
+  notify: Reload Apache

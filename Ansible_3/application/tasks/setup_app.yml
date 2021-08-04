@@ -1,0 +1,58 @@
+- name: Install prerequisites
+  apt: name={{ item }} update_cache=yes state=latest force_apt_get=yes
+  loop: [ 'aptitude' ]
+  tags: apache-php-configuration
+
+
+- name: Install LAMP Packages
+  apt: name={{ item }} update_cache=yes state=latest
+  loop: [ 'apache2', 'php', 'libapache2-mod-php', 'php-mysql']
+  tags: apache-php-configuration
+  when: inventory_hostname in ['appserver']
+
+- name: Install PHP extensions
+  apt:
+    name: [ 'php-curl', 'php-gd', 'php-mbstring', 'php-xml', 'php-xmlrpc', 'php-soap', 'php-intl', 'php-zip' ]
+    state: latest
+    update_cache: true
+  when: inventory_hostname in ['appserver']
+  tags: apache-php-configuration
+
+- name: Create document root
+  file:
+    path: "/var/www/{{ http_host }}"
+    state: directory
+    owner: "{{ app_user }}"
+    mode: '0755'
+  when: inventory_hostname in ['appserver']
+  tags: apache-php-configuration
+
+- name: Set up Apache virtualhost
+  template:
+    src: "templates/apache.conf.j2"
+    dest: "/etc/apache2/sites-available/{{ http_conf }}"
+  notify: Reload Apache
+  when: inventory_hostname in ['appserver']
+  tags: apache-php-configuration
+
+- name: Enable new site
+  shell: /usr/sbin/a2ensite {{ http_conf }}
+  notify: Reload Apache
+  when: inventory_hostname in ['appserver']
+  tags: apache-php-configuration
+
+- name: Disable default Apache site
+  shell: /usr/sbin/a2dissite 000-default.conf
+  when: disable_default
+  notify: Reload Apache
+  when: inventory_hostname in ['appserver']
+  tags: apache-php-configuration
+
+# UFW Configuration
+- name: "UFW - Allow HTTP on port {{ http_port }}"
+  ufw:
+    rule: allow
+    port: "{{ http_port }}"
+    proto: tcp
+  when: inventory_hostname in ['appserver']
+  tags: apache-php-configuration

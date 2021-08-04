@@ -1,0 +1,52 @@
+ #MySQL Configuration
+- name: Install LAMP Packages
+  apt: name={{ item }} update_cache=yes state=latest
+  loop: [ 'mysql-server', 'python3-pymysql']
+  when: inventory_hostname in ['dbserver']
+  tags: mysql-configuration
+
+- name: Sets the root password
+  mysql_user:
+      name: root
+      password: "{{ mysql_root_password }}"
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+  when: inventory_hostname in ['dbserver']
+  tags: mysql-configuration
+
+- name: Create new local my.cnf
+  template:
+    src: templates/client.my.cnf.j2
+    dest: ~/.my.cnf
+    mode: 0600
+  when: inventory_hostname in ['dbserver']
+  tags: mysql-configuration
+
+- name: Create database user with name 'hillel' and password with all database privileges
+  mysql_user:
+    name: "{{ mysql_db_user }}"
+    password: "{{ mysql_password }}"
+    priv: '*.*:ALL'
+    host: "0.0.0.0"
+    state: present
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+  when: inventory_hostname in ['dbserver']
+  tags: mysql-configuration
+
+- name: Removes the MySQL test database
+  mysql_db:
+    name: test
+    state: absent
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+  when: inventory_hostname in ['dbserver']
+  tags: mysql-configuration
+
+- name: Creation MySQL database
+  mysql_db:
+    name: "{{ mysql_db_name }}"
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+  when: inventory_hostname in ['dbserver']
+  tags: mysql-configuration
