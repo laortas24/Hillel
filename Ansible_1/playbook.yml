@@ -1,0 +1,69 @@
+---
+- hosts: all
+  become: true
+  remote_user: devops_user
+  tasks:
+  - name: Enable EPEL Repository on CentOS 7
+    yum:
+      name: epel-release
+      state: present
+
+
+- hosts: app
+  become: true
+  remote_user: devops_user
+  tasks:
+  - name: Install apache2
+    yum:
+      name: httpd
+      state: present
+  - name: Enable apache2
+    service:
+      name: httpd
+      enabled: true
+      state: started
+
+
+- hosts: db
+  become: true
+  remote_user: devops_user
+  tasks:
+  - name: Install MySQL
+    yum:
+      name:
+        - mariadb-server
+        - python3-PyMySQL
+        - MySQL-python
+      state: latest
+  - name: Enable MySQL
+    service:
+      name: mariadb
+      enabled: true
+      state: started
+
+  - name: Create a new database with name 'my_db'
+    community.mysql.mysql_db:
+      name: my_db
+      state: present
+
+
+- hosts: all
+  become: true
+  remote_user: devops_user
+  tasks:
+  - name: Create hillel group
+    group:
+      name: hillel
+      state: present
+
+  - name: Add student user to all hosts.
+    user:
+      name: student
+      password: student_pass
+      groups: hillel
+
+  - name: Add student user to sudo group
+    lineinfile:
+      dest: /etc/sudoers
+      state: present
+      line: 'student ALL=(ALL) NOPASSWD: ALL'
