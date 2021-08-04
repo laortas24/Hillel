@@ -1,0 +1,155 @@
+---
+- hosts: all
+  become: true
+  remote_user: vagrant
+  vars_files:
+    - vars/default.yml
+
+  tasks:
+  - name: Install prerequisites
+    apt: name={{ item }} update_cache=yes state=latest force_apt_get=yes
+    loop: [ 'aptitude' ]
+    tags: apache-php-configuration
+
+- hosts: app
+  become: true
+  gather_facts: false
+  vars_files:
+    - vars/default.yml
+  #Apache Configuration
+  tasks:
+  - name: Install LAMP Packages
+    apt: name={{ item }} update_cache=yes state=latest
+    loop: [ 'apache2', 'php', 'libapache2-mod-php', 'php-mysql']
+    tags: apache-php-configuration
+
+  - name: Install PHP extensions
+    apt:
+      name: [ 'php-curl', 'php-gd', 'php-mbstring', 'php-xml', 'php-xmlrpc', 'php-soap', 'php-intl', 'php-zip' ]
+      state: latest
+      update_cache: true
+    tags: apache-php-configuration
+
+  - name: Create document root
+    file:
+      path: "/var/www/{{ http_host }}"
+      state: directory
+      owner: "{{ app_user }}"
+      mode: '0755'
+    tags: apache-php-configuration
+
+  - name: Set up Apache virtualhost
+    template:
+      src: "templates/apache.conf.j2"
+      dest: "/etc/apache2/sites-available/{{ http_conf }}"
+    notify: Reload Apache
+    tags: apache-php-configuration
+
+  - name: Enable new site
+    shell: /usr/sbin/a2ensite {{ http_conf }}
+    notify: Reload Apache
+    tags: apache-php-configuration
+
+  - name: Disable default Apache site
+    shell: /usr/sbin/a2dissite 000-default.conf
+    when: disable_default
+    notify: Reload Apache
+    tags: apache-php-configuration
+
+  # UFW Configuration
+  - name: "UFW - Allow HTTP on port {{ http_port }}"
+    ufw:
+      rule: allow
+      port: "{{ http_port }}"
+      proto: tcp
+    tags: apache-php-configuration
+
+  # Deploy site
+  - name: Deploy site
+    git:
+      repo: "https://github.com/FaztWeb/php-mysql-crud"
+      dest: "/var/www/{{ http_host }}/"
+      force: yes
+    tags: apache-php-configuration
+
+  # Update DB configuration file for the site
+  - name: Deploy DB configuration file
+    template:
+      src: "templates/db.php.j2"
+      dest: "/var/www/{{ http_host }}/db.php"
+    tags: apache-php-configuration
+    notify: Reload Apache
+
+  handlers:
+  - name: Reload Apache
+    service:
+      name: apache2
+      state: reloaded
+
+  - name: Restart Apache
+    service:
+      name: apache2
+      state: restarted
+
+
+
+- hosts: db
+  become: true
+  remote_user: vagrant
+  gather_facts: false
+  vars_files:
+    - vars/default.yml
+  tasks:
+  #MySQL Configuration
+  - name: Install LAMP Packages
+    apt: name={{ item }} update_cache=yes state=latest
+    loop: [ 'mysql-server', 'python3-pymysql']
+    tags: mysql-configuration
+
+
+  - name: Sets the root password
+    mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    tags: mysql-configuration
+
+  - name: Create new local my.cnf
+    template:
+      src: templates/client.my.cnf.j2
+      dest: ~/.my.cnf
+      mode: 0600
+
+  - name: Create database user with name 'hillel' and password with all database privileges
+    mysql_user:
+      name: "{{ mysql_db_user }}"
+      password: "{{ mysql_password }}"
+      priv: '*.*:ALL'
+      host: "0.0.0.0"
+      state: present
+      login_user: root
+      login_password: "{{ mysql_root_password }}"
+
+
+  - name: Removes the MySQL test database
+    mysql_db:
+      name: test
+      state: absent
+      login_user: "{{ mysql_root_user }}"
+      login_password: "{{ mysql_root_password }}"
+    tags: mysql-configuration
+
+  - name: Creation MySQL database
+    mysql_db:
+      name: "{{ mysql_db_name }}"
+      state: present
+      login_user: "{{ mysql_root_user }}"
+      login_password: "{{ mysql_root_password }}"
+    tags: mysql-configuration
+
+
+  handlers:
+  - name: restart mysql
+    service:
+      name: mysql.service
+      state: restarted
