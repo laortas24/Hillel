@@ -1,0 +1,20 @@
+
+Создать свой git repo
+Создать свой inventory file - hosts
+три группы хостов app, db, env
+env родительская группа для app, db
+add, db - по 1 хосту на каждую группу
+Для всех групп - доступ по ssh ключу - пример у меня в репозитории
+создать ansible playbook , который содержит 4 плея, remote_user для всех плеев- devops_user
+для всех - добавить epel репозиторий
+для группы app
+ставим apache2
+сервис для apache2 в автозагрузку
+become: true
+для группы db
+ставим mysql пакет
+создаём пустую базу,
+become: true
+для всех хостов
+добавить пользователя student, группа hillel, пароль - student_pass, sudo group
+become: true
